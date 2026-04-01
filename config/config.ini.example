@@ -1,0 +1,28 @@
+[default]
+# Kafka Bootstrap Servers
+# Example: pkc-xxxxx.us-east1.gcp.confluent.cloud:9092
+bootstrap.servers=YOUR_BOOTSTRAP_SERVER_HERE
+
+# Security Protocol
+security.protocol=SASL_SSL
+
+# SASL Mechanism
+sasl.mechanisms=PLAIN
+
+# SASL Username (API Key)
+# Get this from your Confluent Cloud console
+sasl.username=YOUR_API_KEY_HERE
+
+# SASL Password (API Secret)
+# Get this from your Confluent Cloud console
+sasl.password=YOUR_API_SECRET_HERE
+
+[consumer]
+# Consumer Group ID
+# You can change this to any unique identifier for your consumer group
+group.id=python_kafka101_group_1
+
+# Auto Offset Reset
+# 'earliest' starts reading from the beginning of the topic if no committed offsets exist
+# 'latest' starts reading from the end of the topic
+auto.offset.reset=earliest

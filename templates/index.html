@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka Message Producer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #555;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 120px;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-send {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-send:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-send:active {
+            transform: translateY(0);
+        }
+
+        .btn-send:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-clear {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .btn-clear:hover {
+            background: #e0e0e0;
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .stats {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+            text-align: center;
+        }
+
+        .stats-title {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .stats-value {
+            color: #667eea;
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .topic-info {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .topic-name {
+            color: #667eea;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📨 Kafka Message Producer</h1>
+        <p class="subtitle">Send messages to your Kafka topic</p>
+        
+        <div class="topic-info">
+            Sending to topic: <span class="topic-name">user_messages</span>
+        </div>
+
+        <form id="messageForm">
+            <div class="form-group">
+                <label for="message">Your Message</label>
+                <textarea 
+                    id="message" 
+                    name="message" 
+                    placeholder="Type your message here..."
+                    required
+                ></textarea>
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn-send" id="sendBtn">
+                    Send to Kafka
+                </button>
+                <button type="button" class="btn-clear" id="clearBtn">
+                    Clear
+                </button>
+            </div>
+        </form>
+
+        <div id="messageAlert" class="message"></div>
+
+        <div class="stats">
+            <div class="stats-title">Messages Sent</div>
+            <div class="stats-value" id="messageCount">0</div>
+        </div>
+    </div>
+
+    <script>
+        let messageCount = 0;
+        const form = document.getElementById('messageForm');
+        const messageInput = document.getElementById('message');
+        const sendBtn = document.getElementById('sendBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const messageAlert = document.getElementById('messageAlert');
+        const messageCountEl = document.getElementById('messageCount');
+
+        function showMessage(text, type) {
+            messageAlert.textContent = text;
+            messageAlert.className = `message ${type} show`;
+            
+            setTimeout(() => {
+                messageAlert.classList.remove('show');
+            }, 5000);
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const message = messageInput.value.trim();
+            if (!message) {
+                showMessage('Please enter a message', 'error');
+                return;
+            }
+
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending...';
+
+            try {
+                const response = await fetch('/send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    messageCount++;
+                    messageCountEl.textContent = messageCount;
+                    showMessage('✓ Message sent successfully!', 'success');
+                    messageInput.value = '';
+                } else {
+                    showMessage('✗ Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showMessage('✗ Network error: ' + error.message, 'error');
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send to Kafka';
+            }
+        });
+
+        clearBtn.addEventListener('click', () => {
+            messageInput.value = '';
+            messageInput.focus();
+        });
+
+        // Focus on textarea when page loads
+        messageInput.focus();
+    </script>
+</body>
+</html>
